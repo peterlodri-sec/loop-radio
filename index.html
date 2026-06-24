@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<!--
+  Loop Radio — Procedural Web Audio Engine
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  https://github.com/peterlodri-sec/loop-radio
+
+  Single-file, zero-dependency. Open in a browser or fork and host anywhere.
+  Type a genre (stoner, desert rock, lofi, techno, dark ambient…) and the
+  engine generates live audio using only the Web Audio API and WebGL2 canvas.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loop Radio — Procedural Audio</title>
+<meta name="description" content="Zero-dependency procedural audio engine. Type a genre and it generates music live.">
+<meta property="og:title" content="Loop Radio">
+<meta property="og:description" content="Procedural real-time audio. Lofi by default.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;
+  --card:#111827cc;
+  --accent:#7c3aed;
+  --accent2:#06b6d4;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --border:#1e293b;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1rem}
+.card{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:1.25rem;padding:2.25rem 2rem;width:100%;max-width:480px;box-shadow:0 20px 60px #0008}
+h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;text-align:center}
+h1 span{color:var(--accent2)}
+.sub{text-align:center;color:var(--muted);font-size:.85rem;margin-top:.25rem}
+.genre-row{display:flex;gap:.5rem;margin-top:1.5rem}
+input{
+  flex:1;padding:.7rem 1rem;background:#0f172a;border:1px solid var(--border);
+  border-radius:.6rem;color:var(--text);font-size:.95rem;outline:none;
+  transition:border-color .2s;
+}
+input:focus{border-color:var(--accent)}
+.play-btn{
+  padding:.7rem 1.25rem;background:var(--accent);color:#fff;border:none;
+  border-radius:.6rem;font-weight:600;cursor:pointer;font-size:.95rem;
+  transition:background .15s,transform .1s;white-space:nowrap;
+}
+.play-btn:hover{background:#6d28d9}
+.play-btn:active{transform:scale(.97)}
+.play-btn.on{background:#ef4444}
+.play-btn.on:hover{background:#dc2626}
+.status{text-align:center;color:var(--muted);font-size:.85rem;margin-top:.85rem;min-height:1.2em}
+canvas#vis{
+  width:100%;height:56px;border-radius:.5rem;margin-top:1rem;
+  background:#0f172a;display:block;
+}
+.tags{font-size:.78rem;color:#475569;margin-top:.5rem}
+.tags b{color:#64748b}
+.info{margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid var(--border);font-size:.82rem;color:#94a3b8;line-height:1.6}
+.info h3{font-size:.92rem;color:var(--text);margin-bottom:.4rem}
+.info ul{padding-left:1.1rem;margin-top:.3rem}
+.info li{margin-bottom:.3rem}
+.info a{color:var(--accent2);text-decoration:none}
+.info a:hover{text-decoration:underline}
+.badge{
+  display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;
+  background:#1e293b;border:1px solid #334155;border-radius:99px;
+  padding:.2rem .7rem;color:#64748b;margin-top:1rem;
+}
+footer{margin-top:1.5rem;text-align:center;font-size:.75rem;color:#334155}
+footer a{color:#475569}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="wrap">
+  <div class="card">
+    <h1>Loop <span>Radio</span></h1>
+    <p class="sub">Procedural real-time audio engine — zero dependencies</p>
+
+    <div class="genre-row">
+      <input id="genre" value="lofi programming" placeholder="lofi, stoner, desert rock, techno, ambient…">
+      <button class="play-btn" id="btn">Play</button>
+    </div>
+
+    <div class="status" id="status">Stopped — type a genre and press Play</div>
+    <canvas id="vis" width="480" height="56"></canvas>
+    <p class="tags">Try: <b>stoner</b> · <b>desert rock</b> · <b>dark ambient</b> · <b>daft punk</b> · <b>techno</b> · <b>8bit</b> · <b>jazz</b></p>
+
+    <div class="info">
+      <h3>How it works</h3>
+      <p>No MP3s, no servers — pure browser math. Your genre text scales the scheduler BPM, harmonic scale, oscillator waveform, and rhythm density in real time.</p>
+      <ul>
+        <li><b>Keyword parser</b> maps genre text to synthesis parameters.</li>
+        <li><b>Lookahead scheduler</b> generates timed Web Audio nodes ~100ms ahead, ensuring glitch-free output.</li>
+        <li><b>Procedural synthesis</b> — oscillators + exponential envelopes model kick, bass, and melodic layers.</li>
+      </ul>
+      <div style="text-align:center;margin-top:.8rem">
+        <a href="https://github.com/peterlodri-sec/loop-radio" target="_blank">↗ Source (AGPL-3.0)</a>
+        &nbsp;·&nbsp;
+        <a href="https://pocoo.vaked.dev" target="_blank">Blog</a>
+      </div>
+    </div>
+
+    <div style="text-align:center">
+      <span class="badge" id="tel-badge">telemetry: off</span>
+    </div>
+  </div>
+  <footer>
+    <a href="https://peterlodri-sec.github.io">peterlodri-sec</a> ·
+    <a href="https://pocoo.vaked.dev">pocoo</a> ·
+    <a href="https://protocol.vaked.dev">protocol</a>
+  </footer>
+</div>
+
+<script>
+/* ── ENTHEA Tier-2 telemetry — no PII, no cookies ── */
+(function(){
+  var E='https://chat.vaked.dev/api/telemetry';
+  var sid=crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
+  var t0=Date.now();
+  function send(ev){fetch(E,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:ev})}).catch(function(){});}
+  send([{type:'page_view',timestamp:Date.now(),session_id:sid,page:'loop-radio'}]);
+  window.loopRadioTelemetry={send:send,sid:sid,t0:t0};
+  window.addEventListener('beforeunload',function(){
+    navigator.sendBeacon(E,JSON.stringify({events:[{type:'session_end',timestamp:Date.now(),session_id:sid,page:'loop-radio',duration_sec:Math.round((Date.now()-t0)/1000)}]}));
+  });
+  document.getElementById('tel-badge').textContent='telemetry: Tier 2 (no PII)';
+})();
+</script>
+
+<script>
+/* ── WebGL2 background — pulsing rings + wave ── */
+(function(){
+  const cv=document.getElementById('bg'),gl=cv.getContext('webgl2');
+  if(!gl)return;
+  const VS=`#version 300 es\nin vec2 a;void main(){gl_Position=vec4(a,0,1);}`;
+  const FS=`#version 300 es
+precision highp float;
+uniform vec2 R;uniform float T;uniform float BPM;
+out vec4 c;
+float ring(vec2 uv,float r,float w){return smoothstep(w,0.,abs(length(uv)-r));}
+void main(){
+  vec2 uv=(gl_FragCoord.xy/R)*2.-1.;uv.x*=R.x/R.y;
+  float t=T*.18;
+  float beat=fract(T*BPM/60.);
+  float pulse=1.+.08*exp(-beat*5.);
+  vec3 col=vec3(0);
+  col+=ring(uv,(.55+.04*sin(t*.7))*pulse,.007)*vec3(.48,.2,1.)*(.4+.3*sin(t*.6));
+  col+=ring(uv,(.38+.03*sin(t*.5+1.2))*pulse,.005)*vec3(0.,.83,1.)*(.35+.25*sin(t*.5+.8));
+  col+=ring(uv,(.72+.05*sin(t*.4+2.4))*pulse,.004)*vec3(.48,.2,1.)*(.25+.2*sin(t*.35+1.6));
+  col+=ring(uv,(.22+.02*sin(t*.9))*pulse,.006)*vec3(0.,.9,.4)*(.3+.2*sin(t*.8+2.));
+  col+=exp(-length(uv)*2.8)*vec3(.15,.07,.35)*.7;
+  for(float i=0.;i<3.;i++){
+    float py=-.62+(.06-.015*i)*sin(gl_FragCoord.x*(.006+i*.002)+T*(.5+i*.15)+i*2.1);
+    col+=smoothstep(.013,0.,abs(uv.y-py))*(.18-.05*i)*vec3(.27,.56,1.);
+  }
+  col+=fract(sin(dot(uv+T*.01,vec2(127.1,311.7)))*43758.5)*.015;
+  c=vec4(col,1.);
+}`;
+  function sh(t,s){const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);return x;}
+  const p=gl.createProgram();
+  gl.attachShader(p,sh(gl.VERTEX_SHADER,VS));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(p);gl.useProgram(p);
+  const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  const al=gl.getAttribLocation(p,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+  const uR=gl.getUniformLocation(p,'R'),uT=gl.getUniformLocation(p,'T'),uBPM=gl.getUniformLocation(p,'BPM');
+  function resize(){cv.width=innerWidth;cv.height=innerHeight;gl.viewport(0,0,innerWidth,innerHeight);}
+  resize();window.addEventListener('resize',resize);
+  let ts=0;
+  window._glBPM=120;
+  (function frame(){
+    ts+=.016;
+    gl.uniform2f(uR,cv.width,cv.height);gl.uniform1f(uT,ts);gl.uniform1f(uBPM,window._glBPM||120);
+    gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(frame);
+  })();
+})();
+</script>
+
+<script>
+/* ── Procedural Audio Engine ── */
+(function(){
+
+const SCALES={
+  major:[0,2,4,7,9],
+  minor:[0,2,3,5,7,10],
+  phrygian:[0,1,3,5,7,8,10],
+  pentatonic:[0,2,4,7,9],
+  blues:[0,3,5,6,7,10],
+  dorian:[0,2,3,5,7,9,10],
+};
+
+function parseGenre(text){
+  const q=text.toLowerCase();
+  // defaults: lofi/programming daft punk style
+  let bpm=85,scale=SCALES.pentatonic,base=65.41,wave='triangle',drums=true,kickD=2,decay=.55,bass=true,reverb=.3;
+
+  if(q.match(/daft.?punk|house|french/)){bpm=128;scale=SCALES.minor;wave='sawtooth';kickD=1;decay=.2;base=110;}
+  else if(q.match(/stoner|desert.?rock|psych|fuzz/)){bpm=72;scale=SCALES.phrygian;wave='sawtooth';kickD=2;decay=.9;base=55;}
+  else if(q.match(/doom|sludge|heavy/)){bpm=60;scale=SCALES.phrygian;wave='sawtooth';kickD=2;decay=1.2;base=41.2;reverb=.5;}
+  else if(q.match(/techno|industrial|bpunk/)){bpm=140;scale=SCALES.minor;wave='sawtooth';kickD=1;decay=.15;base=73.4;}
+  else if(q.match(/dark.?ambient|drone|ominous/)){bpm=50;scale=SCALES.phrygian;wave='sine';drums=false;decay=2.5;base=55;reverb=.7;}
+  else if(q.match(/ambient|new.?age|ethereal/)){bpm=70;scale=SCALES.major;wave='sine';drums=false;decay=1.8;base=65.4;reverb=.6;}
+  else if(q.match(/jazz|bebop|swing/)){bpm=145;scale=SCALES.dorian;wave='triangle';kickD=2;decay=.3;base=82.4;}
+  else if(q.match(/8.?bit|chiptune|retro|game/)){bpm=150;scale=SCALES.major;wave='square';kickD=1;decay=.1;base=110;}
+  else if(q.match(/lofi|lo.?fi|chill|study/)){bpm=85;scale=SCALES.minor;wave='triangle';kickD=2;decay=.55;base=65.41;}
+  else if(q.match(/prog|math.?rock|complex/)){bpm=100;scale=SCALES.dorian;wave='triangle';kickD=3;decay=.4;}
+  else if(q.match(/fast|speed|thrash/)){bpm=200;scale=SCALES.minor;wave='sawtooth';kickD=1;decay=.12;}
+  else if(q.match(/slow|ballad|sad/)){bpm=60;scale=SCALES.minor;wave='triangle';kickD=4;decay=.8;}
+  // bpm modifiers
+  if(q.match(/very fast|hyper/)) bpm=Math.min(bpm*1.4,240)|0;
+  if(q.match(/very slow/)) bpm=Math.max(bpm*.6,40)|0;
+
+  return {bpm,scale,base,wave,drums,kickD,decay,bass,reverb};
+}
+
+let ctx=null,analyser=null,reverbNode=null,isPlaying=false;
+let timer=null,step=0,nextT=0,cfg={};
+const LOOKAHEAD=0.12,INTERVAL=28;
+
+function midiFreq(m){return 440*Math.pow(2,(m-69)/12);}
+
+function makeReverb(c,secs){
+  const len=c.sampleRate*secs|0,buf=c.createBuffer(2,len,c.sampleRate);
+  for(let i=0;i<2;i++){const d=buf.getChannelData(i);for(let j=0;j<len;j++)d[j]=(Math.random()*2-1)*Math.pow(1-j/len,2);}
+  const n=c.createConvolver();n.buffer=buf;return n;
+}
+
+function kick(t){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.connect(g);g.connect(ctx.destination);
+  o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(.01,t+.15);
+  g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(.01,t+.18);
+  o.start(t);o.stop(t+.2);
+}
+
+function hihat(t,open){
+  const buf=ctx.createBuffer(1,ctx.sampleRate*.05|0,ctx.sampleRate);
+  const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+  f.type='highpass';f.frequency.value=8000;
+  s.buffer=buf;s.connect(f);f.connect(g);g.connect(ctx.destination);
+  const dur=open?.18:.04;
+  g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.start(t);s.stop(t+dur);
+}
+
+function bassNote(t,midi,dur){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='sawtooth';o.frequency.value=midiFreq(midi);
+  const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=500;f.Q.value=4;
+  o.connect(f);f.connect(g);g.connect(ctx.destination);
+  g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.start(t);o.stop(t+dur+.05);
+}
+
+function synth(t,midi,dur,wave){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=wave;o.frequency.value=midiFreq(midi);
+  o.connect(g);g.connect(reverbNode||ctx.destination);
+  if(reverbNode) reverbNode.connect(ctx.destination);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.025);
+  g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.start(t);o.stop(t+dur+.05);
+}
+
+function scheduleStep(stp,t){
+  const s16=stp%16,beat=stp%4===0,halfBeat=stp%2===0;
+  // kick
+  if(cfg.drums){
+    const kickPat=[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0];
+    const dPat={1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],2:[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],3:[1,0,1,0,0,0,1,0,1,0,0,1,0,0,1,0],4:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]};
+    const pat=dPat[cfg.kickD]||dPat[1];
+    if(pat[s16])kick(t);
+    // hihat
+    const hOpen=s16===6||s16===14;
+    if(s16%2===1)hihat(t,hOpen);
+  }
+  // bass
+  if(cfg.bass&&cfg.drums){
+    const rootMidi=36+cfg.scale[0]; // C1 + root
+    const bassPat=[1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0];
+    if(bassPat[s16]){
+      const deg=cfg.scale[Math.random()>.7?1:0];
+      const oct=Math.random()>.8?12:0;
+      bassNote(t,rootMidi+deg+oct,cfg.decay*.6);
+    }
+  }
+  // melody
+  const melProb=cfg.decay>1?.12:.38;
+  if(beat||(halfBeat&&Math.random()<melProb)||(Math.random()<melProb*.4)){
+    const root=48; // C3
+    const deg=cfg.scale[Math.floor(Math.random()*cfg.scale.length)];
+    const oct=(Math.random()>.65?12:0)+(Math.random()>.85?12:0);
+    synth(t,root+deg+oct,cfg.decay,cfg.wave);
+  }
+}
+
+function scheduler(){
+  while(nextT<ctx.currentTime+LOOKAHEAD){
+    scheduleStep(step,nextT);
+    nextT+=(60/cfg.bpm)*.25; // 16th note
+    step=(step+1)%16;
+  }
+  timer=setTimeout(scheduler,INTERVAL);
+}
+
+function start(){
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=ctx.createAnalyser();analyser.fftSize=128;
+  analyser.connect(ctx.destination);
+  cfg=parseGenre(document.getElementById('genre').value);
+  if(cfg.reverb>.1) reverbNode=makeReverb(ctx,cfg.reverb*2.5);
+  window._glBPM=cfg.bpm;
+  step=0;nextT=ctx.currentTime+.05;isPlaying=true;
+  document.getElementById('btn').textContent='Stop';document.getElementById('btn').className='play-btn on';
+  document.getElementById('status').textContent=`Broadcasting: ${cfg.bpm} BPM · ${document.getElementById('genre').value}`;
+  if(window.loopRadioTelemetry)window.loopRadioTelemetry.send([{type:'radio_start',timestamp:Date.now(),session_id:window.loopRadioTelemetry.sid,genre:document.getElementById('genre').value,bpm:cfg.bpm}]);
+  scheduler();
+  drawVis();
+}
+
+function stop(){
+  clearTimeout(timer);isPlaying=false;
+  if(ctx){ctx.close();ctx=null;reverbNode=null;}
+  window._glBPM=0;
+  document.getElementById('btn').textContent='Play';document.getElementById('btn').className='play-btn';
+  document.getElementById('status').textContent='Stopped';
+}
+
+document.getElementById('btn').addEventListener('click',()=>isPlaying?stop():start());
+document.getElementById('genre').addEventListener('keydown',e=>{if(e.key==='Enter'&&!isPlaying)start();});
+
+// vis
+const vc=document.getElementById('vis'),vx=vc.getContext('2d');
+function drawVis(){
+  if(!isPlaying)return;requestAnimationFrame(drawVis);
+  if(!analyser)return;
+  const N=analyser.frequencyBinCount,d=new Uint8Array(N);
+  analyser.getByteFrequencyData(d);
+  vx.fillStyle='#0f172a';vx.fillRect(0,0,vc.width,vc.height);
+  const w=vc.width/N*2;
+  for(let i=0;i<N;i++){
+    const h=d[i]/255*vc.height;
+    const r=Math.min(255,(h*3+60)|0),g=100,bl=246;
+    vx.fillStyle=`rgb(${r},${g},${bl})`;
+    vx.fillRect(i*w,vc.height-h,w-1,h);
+  }
+}
+
+// expose for console use
+window.loopRadio={start,stop,parseGenre};
+})();
+</script>
+
+</body>
+</html>
